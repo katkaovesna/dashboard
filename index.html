@@ -214,6 +214,7 @@ footer{text-align:center;font-size:11px;color:var(--muted-2);margin:22px 0 8px;l
     <h2>Obvod pása</h2>
     <figure><svg id="c-waist" role="img" aria-label="Obvod pása"></svg><div class="tip" id="t-waist"></div></figure>
     <p class="caption">Červená čiara = 88 cm, orientačná klinická hranica kardiometabolického rizika pre ženy.</p>
+    <p class="caption" id="next-measure"></p>
   </section>
 
   <details class="card fold">
@@ -539,6 +540,20 @@ function render(){
   var n = rows.length;
   document.getElementById("hcount").textContent =
     n + (n === 1 ? " záznam" : (n >= 2 && n <= 4) ? " záznamy" : " záznamov");
+
+  var nm = document.getElementById("next-measure");
+  if (nm){
+    var withCirc = rows.filter(function(e){
+      return (e.waist != null && e.waist !== "") || (e.hip != null && e.hip !== "") || (e.neck != null && e.neck !== "");
+    });
+    if (withCirc.length && P.measurementCadenceDays){
+      var lastCircDay = dayIndex(withCirc[withCirc.length-1].date);
+      var nextDay = lastCircDay + Number(P.measurementCadenceDays);
+      nm.textContent = "Ďalšie meranie obvodov (pás/boky/krk) odporúčané okolo " + fmtDay(nextDay) + ".";
+    } else {
+      nm.textContent = "";
+    }
+  }
 
   document.getElementById("footer").innerHTML =
     "Dáta sú zašifrované a čitateľné len s tvojím kľúčom z adresy. Nové hodnoty pridávaš tak, že ich napíšeš Claudovi v tomto projekte.<br>" +
