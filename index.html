@@ -324,9 +324,12 @@ function linRegSlope(pts){
   if (den === 0) return null;
   return (n*sxy - sx*sy)/den;
 }
-function navyBodyFat(waist, neck, height){
-  if (!waist || !neck || waist <= neck) return null;
-  return 495 / (1.0324 - 0.19077*Math.log10(waist-neck) + 0.15456*Math.log10(height)) - 450;
+function navyBodyFat(waist, hip, neck, height){
+  // US Navy method, female formula (requires hip): needs waist, hip, neck, height.
+  if (!waist || !hip || !neck || height == null) return null;
+  var s = waist + hip - neck;
+  if (s <= 0) return null;
+  return 495 / (1.29579 - 0.35004*Math.log10(s) + 0.22100*Math.log10(height)) - 450;
 }
 
 function el(tag, attrs){
@@ -443,8 +446,10 @@ function render(){
   var lastWaist  = sPts.length ? sPts[sPts.length-1].y : P.startWaist;
   var withNeck = rows.filter(function(e){ return e.neck != null && e.neck !== ""; });
   var lastNeck = withNeck.length ? Number(withNeck[withNeck.length-1].neck) : P.startNeck;
+  var withHip = rows.filter(function(e){ return e.hip != null && e.hip !== ""; });
+  var lastHip = withHip.length ? Number(withHip[withHip.length-1].hip) : null;
 
-  var bf = navyBodyFat(lastWaist, lastNeck, P.height);
+  var bf = navyBodyFat(lastWaist, lastHip, lastNeck, P.height);
   var fatMass = bf ? lastWeight*bf/100 : null;
   var leanMass = bf ? lastWeight - fatMass : null;
 
@@ -484,7 +489,7 @@ function render(){
     {ic:"trend", lb:"Tempo (2–3 týž.)", v: pace === null ? "—" : num(pace,2)+" kg/t", sub:status.label, col:status.color},
     {ic:"ruler", lb:"Obvod pása", v:num(lastWaist,0)+" cm", sub:signed(dS,0,"cm")+" od štartu"},
     {ic:"anchor", lb:"Odhad tuku (Navy)", v: bf ? num(bf,1)+" %" : "—",
-     sub: bf ? "~"+num(fatMass,1)+" kg tuku / "+num(leanMass,1)+" kg LBM" : ""}
+     sub: bf ? "~"+num(fatMass,1)+" kg tuku / "+num(leanMass,1)+" kg LBM" : (lastHip ? "" : "chýba obvod bokov")}
   ].map(function(s){
     return '<div class="scard"><div class="sicon">'+icon(s.ic,16)+'</div>'+
            '<div class="slabel">'+s.lb+'</div><div class="sval mono">'+s.v+'</div>'+
@@ -525,10 +530,10 @@ function render(){
   });
 
   document.getElementById("table").innerHTML =
-    "<thead><tr><th>Dátum</th><th>Váha</th><th>Pás</th><th>Krk</th><th>Poznámka</th></tr></thead><tbody>" +
+    "<thead><tr><th>Dátum</th><th>Váha</th><th>Pás</th><th>Boky</th><th>Krk</th><th>Poznámka</th></tr></thead><tbody>" +
     rows.slice().reverse().map(function(e){
       return "<tr><td>"+fmtDate(e.date)+"</td><td>"+num(e.weight,1)+"</td><td>"+num(e.waist,0)+
-             "</td><td>"+num(e.neck,0)+'</td><td class="note">'+(e.note||"")+"</td></tr>";
+             "</td><td>"+num(e.hip,0)+"</td><td>"+num(e.neck,0)+'</td><td class="note">'+(e.note||"")+"</td></tr>";
     }).join("") + "</tbody>";
 
   var n = rows.length;
