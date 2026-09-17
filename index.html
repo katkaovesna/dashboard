@@ -572,12 +572,52 @@ function isToday(label){
   var now = new Date();
   return (+m[1]) === now.getDate() && (+m[2]) === (now.getMonth() + 1);
 }
+function metricBlock(label, actual, target, higherIsBetter, unit){
+  if (actual == null || actual === "" || isNaN(actual)){
+    return '<div><div class="slabel">' + label + '</div><div class="mono" style="color:#8C8A88;font-size:14px">—</div></div>';
+  }
+  var color = "#5FA85A";
+  if (target != null){
+    var d = actual - target, tol = Math.abs(target) * 0.06;
+    if (higherIsBetter){ color = d >= -tol ? "#5FA85A" : "#E5484D"; }
+    else { color = Math.abs(d) <= tol ? "#5FA85A" : (d > 0 ? "#E5484D" : "#D6923D"); }
+  }
+  return '<div><div class="slabel">' + label + '</div>' +
+    '<div class="mono" style="font-size:14px;font-weight:600;color:' + color + '">' + num(actual, 0) +
+    (target != null
+      ? '<span style="font-size:11px;color:#8C8A88;font-weight:400"> / ' + num(target, 0) + ' ' + unit + '</span>'
+      : ' ' + unit) +
+    '</div></div>';
+}
+function buildFoodLogSection(){
+  var foodLog = (DATA.entries || []).filter(function(e){ return e.food; })
+    .slice().sort(function(a, b){ return a.date < b.date ? 1 : -1; });
+  if (!foodLog.length) return '';
+  var rows = foodLog.map(function(e, i){
+    var f = e.food;
+    var grid = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px">' +
+      metricBlock("Kalórie", f.kcal, P.dailyCalories, false, "kcal") +
+      metricBlock("Bielkoviny", f.p, P.dailyProtein, true, "g") +
+      metricBlock("Tuky", f.f, P.dailyFat, false, "g") +
+      metricBlock("Sacharidy", f.c, P.dailyCarbs, false, "g") +
+      '</div>';
+    return '<div class="meal' + (i === 0 ? ' first' : '') + '">' +
+      '<div class="daytitle" style="font-size:14px;margin-bottom:4px">' + fmtDate(e.date) + '</div>' +
+      (e.note ? '<div class="mitems">' + esc(e.note) + '</div>' : '') +
+      grid + '</div>';
+  }).join("");
+  return '<details class="card fold"><summary>Čo som naozaj zjedla <span class="count">' +
+    foodLog.length + (foodLog.length === 1 ? ' deň' : (foodLog.length < 5 ? ' dni' : ' dní')) +
+    '</span></summary><div class="scroll">' + rows + '</div></details>';
+}
 function renderMeals(){
   var host = document.getElementById("panel-meals");
   var MP = DATA.mealPlan;
+  var logSection = buildFoodLogSection();
   if (!MP || !MP.days || !MP.days.length){
     host.innerHTML = '<section class="card"><h2>Jedálniček</h2>' +
-      '<p class="caption">Zatiaľ tu nie je žiadny plán. Napíš mi v chate a doplním ho sem, keď ho spolu odsúhlasíme.</p></section>';
+      '<p class="caption">Zatiaľ tu nie je žiadny plán. Napíš mi v chate a doplním ho sem, keď ho spolu odsúhlasíme.</p></section>' +
+      logSection;
     return;
   }
   var head = '<section class="card"><div class="headrow"><h2>Jedálniček · ' + esc(MP.week || "") + '</h2>' +
@@ -614,7 +654,7 @@ function renderMeals(){
       MP.tips.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join("") + '</ul></section>'
     : '';
 
-  host.innerHTML = head + days + tips;
+  host.innerHTML = head + days + tips + logSection;
 }
 
 function shopKey(){ return "shop:" + ((DATA.shopping && DATA.shopping.updated) || "x"); }
