@@ -277,11 +277,14 @@ function fail(title, msg){
 async function boot(){
   var kb64 = getKeyParam();
   if (!kb64){ document.getElementById("gate").classList.remove("hidden"); return; }
-  var payload;
+  var payload, payload2;
   try {
     var res = await fetch("data.json", {cache:"no-store"});
     if (!res.ok) throw new Error(res.status);
     payload = await res.json();
+    var res2 = await fetch("data_entries.json", {cache:"no-store"});
+    if (!res2.ok) throw new Error(res2.status);
+    payload2 = await res2.json();
   } catch(e){
     return fail("Dáta sa nenačítali", "Súbor s meraniami sa nepodarilo stiahnuť. Skús stránku načítať znova o chvíľu.");
   }
@@ -289,6 +292,9 @@ async function boot(){
     var key = await crypto.subtle.importKey("raw", b64uToBytes(kb64), {name:"AES-GCM"}, false, ["decrypt"]);
     var plain = await crypto.subtle.decrypt({name:"AES-GCM", iv:b64uToBytes(payload.iv)}, key, b64uToBytes(payload.ct));
     DATA = JSON.parse(new TextDecoder().decode(plain));
+    var plain2 = await crypto.subtle.decrypt({name:"AES-GCM", iv:b64uToBytes(payload2.iv)}, key, b64uToBytes(payload2.ct));
+    var ENTRIES = JSON.parse(new TextDecoder().decode(plain2));
+    DATA.entries = ENTRIES.entries;
     P = DATA.profile;
   } catch(e){
     return fail("Nesprávny kľúč", "Kľúč v adrese nesedí k týmto dátam. Skontroluj, či si použila svoju pôvodnú záložku celú, aj s časťou za znakom #.");
